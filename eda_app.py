@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from pmdarima import auto_arima
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 import matplotlib.pyplot as plt
 from xgboost import XGBRegressor
@@ -169,73 +168,7 @@ if 'is_holiday' in df.columns:
     df = df.drop(columns=['is_holiday'])
 
 # Define forecasting functions
-def forecast_autoarima(data):
-    """AutoARIMA forecasting with error handling using pmdarima"""
-    try:
-        from pmdarima import auto_arima
-        import warnings
-        warnings.filterwarnings('ignore')
-        
-        # Use y values for forecasting
-        y = data['y'].values
-        
-        # Handle sparse or problematic data
-        if len(y) < 3:
-            return None, None, None
-        
-        # Fit AutoARIMA model
-        model = auto_arima(
-            y,
-            start_p=0, start_q=0,
-            max_p=3, max_q=3,
-            seasonal=False,
-            stepwise=True,
-            suppress_warnings=True,
-            error_action='ignore',
-            trace=False
-        )
-        
-        # Make forecast
-        forecast, conf_int = model.predict(n_periods=1, return_conf_int=True)
-        
-        lower_bound = max(0, float(conf_int[0][0]))  # Ensure lower bound is not negative
-        return float(forecast[0]), lower_bound, float(conf_int[0][1])
-        
-    except Exception:
-        # Fallback to simple ARIMA if AutoARIMA fails
-        try:
-            from statsmodels.tsa.arima.model import ARIMA
-            
-            y = data['y'].values
-            if len(y) < 3:
-                return None, None, None
-            
-            # Try different ARIMA parameters
-            orders = [(1, 1, 1), (0, 1, 1), (1, 0, 1), (2, 1, 2)]
-            
-            for order in orders:
-                try:
-                    model = ARIMA(y, order=order)
-                    fitted = model.fit()
-                    forecast = fitted.forecast(steps=1)
-                    
-                    # Calculate confidence interval
-                    conf_int = fitted.get_forecast(steps=1).conf_int()
-                    lower = conf_int.iloc[0, 0]
-                    upper = conf_int.iloc[0, 1]
-                    
-                    lower_bound = max(0, float(lower))  # Ensure lower bound is not negative
-                    return float(forecast[0]), lower_bound, float(upper)
-                except:
-                    continue
-            
-            # Final fallback: use last value
-            last_val = y[-1]
-            lower_bound = max(0, last_val * 0.9)  # Ensure lower bound is not negative
-            return float(last_val), float(lower_bound), float(last_val * 1.1)
-            
-        except Exception:
-            return None, None, None
+## Removed forecast_autoarima and all pmdarima related code
 
 def forecast_xgboost(data):
     """XGBoost forecasting with error handling"""
@@ -330,7 +263,7 @@ def calculate_mape(actual, forecast):
     return abs((actual - forecast) / actual) * 100
 
 def forecast_best_model(data):
-    """Run both XGBoost and AutoARIMA, return the best model based on MAPE"""
+    """Run XGBoost and return the best model based on MAPE"""
     if len(data) < 2:
         return None, None, None, None, None
     
@@ -355,18 +288,7 @@ def forecast_best_model(data):
     
     # Try AutoARIMA
     try:
-        arima_forecast, arima_lower, arima_upper = forecast_autoarima(data)
-        if arima_forecast is not None and not np.isnan(arima_forecast):
-            # Calculate MAPE using the last actual value as a proxy
-            actual = data['y'].iloc[-1]
-            arima_mape = calculate_mape(actual, arima_forecast)
-            results['Statistical'] = {
-                'forecast': arima_forecast,
-                'lower': arima_lower,
-                'upper': arima_upper,
-                'mape': arima_mape,
-                'model_name': 'Statistical'
-            }
+        raise NotImplementedError("AutoARIMA logic has been removed.")
     except Exception:
         pass
     
